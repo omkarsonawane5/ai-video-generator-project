@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+.venv/
+output/*.mp4
+temp/*
+!temp/.gitkeep
+!output/.gitkeep
