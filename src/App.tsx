@@ -1,0 +1,14 @@
+import React, {useRef, useState} from 'react';
+import {createRoot} from 'react-dom/client';
+import {Mic, Square, Settings, Download} from 'lucide-react';
+import './styles.css';
+
+type Msg={role:'user'|'assistant';content:string;sources?:{title:string;url:string}[]};
+const API='http://127.0.0.1:8787/api';
+function App(){
+ const [messages,setMessages]=useState<Msg[]>([]); const [text,setText]=useState(''); const [recording,setRecording]=useState(false); const rec=useRef<MediaRecorder|null>(null); const chunks=useRef<Blob[]>([]);
+ async function send(t=text,search=false){if(!t.trim())return; setMessages(m=>[...m,{role:'user',content:t}]); setText(''); const r=await fetch(`${API}/chat`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:t,use_search:search,session_id:'desktop'})}); const data=await r.json(); setMessages(m=>[...m,{role:'assistant',content:data.text,sources:data.sources}]); const audio=await fetch(`${API}/speech/synthesize`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:data.text})}); new Audio(URL.createObjectURL(await audio.blob())).play();}
+ async function toggleMic(){ if(recording){rec.current?.stop(); setRecording(false); return;} const stream=await navigator.mediaDevices.getUserMedia({audio:true}); chunks.current=[]; rec.current=new MediaRecorder(stream); rec.current.ondataavailable=e=>chunks.current.push(e.data); rec.current.onstop=async()=>{const fd=new FormData(); fd.append('file',new Blob(chunks.current,{type:'audio/webm'}),'speech.webm'); const r=await fetch(`${API}/speech/transcribe`,{method:'POST',body:fd}); const d=await r.json(); send(d.text,true); stream.getTracks().forEach(t=>t.stop());}; rec.current.start(); setRecording(true);}
+ function exportChat(){const blob=new Blob([JSON.stringify(messages,null,2)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='conversation.json'; a.click();}
+ return <main><aside><h1>AI Voice</h1><p>Natural Windows assistant with streaming-ready FastAPI backend, web search, memory, STT and TTS.</p><button onClick={toggleMic} className={recording?'danger':'primary'}>{recording?<Square/>:<Mic/>}{recording?'Stop':'Talk'}</button><button onClick={exportChat}><Download/>Export</button><button><Settings/>Settings</button><div className="wave"><i/><i/><i/><i/><i/></div></aside><section><div className="chat">{messages.map((m,i)=><article key={i} className={m.role}><b>{m.role}</b><p>{m.content}</p>{m.sources?.length? <ul>{m.sources.map(s=><li key={s.url}><a href={s.url}>{s.title}</a></li>)}</ul>:null}</article>)}</div><form onSubmit={e=>{e.preventDefault();send(text,true)}}><input value={text} onChange={e=>setText(e.target.value)} placeholder="Ask anything, or use the microphone..."/><button>Send</button></form></section></main>}
+createRoot(document.getElementById('root')!).render(<App/>);
