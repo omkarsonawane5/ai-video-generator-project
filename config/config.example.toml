@@ -1,0 +1,13 @@
+[assistant]
+system_prompt = "You are a concise, natural Windows voice assistant. Use web search for current facts and cite sources."
+max_history_messages = 20
+
+[voice]
+wake_word = "assistant"
+input_mode = "push_to_talk"
+tts_provider = "openai"
+stt_provider = "openai"
+
+[search]
+provider = "duckduckgo"
+max_results = 5

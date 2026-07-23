@@ -1,57 +1,65 @@
-# AI Content Generator & Auto Video Creator
+# AI Voice Assistant for Windows
 
-A demo-ready final year project built with **Streamlit** that generates AI scripts and auto-creates narrated videos.
+Production-ready Python 3.12+ voice assistant with a FastAPI backend and React/Electron desktop UI. It supports microphone input, OpenAI STT/TTS, OpenAI Responses API chat, session memory, web search with sources, webpage summarization, dark mode UI, waveform animation, and conversation export.
 
-## Features
-- Modern Streamlit dashboard with responsive layout
-- Generate **standard (16:9)** or **YouTube Shorts (9:16)** videos
-- Automatic subtitle generation with styled caption overlays
-- Multiple AI voice options (Microsoft Edge TTS voices)
-- Optional background music integration with audio balancing
-- Real-time progress bar during generation
-- Download button for final rendered video
-- Structured logging and improved error handling
-
-## Project Structure
+## Architecture
 
 ```text
-.
-├── app.py
-├── requirements.txt
-├── src
-│   ├── __init__.py
-│   ├── config.py
-│   ├── content_generator.py
-│   ├── logger.py
-│   ├── subtitle_generator.py
-│   ├── video_creator.py
-│   └── voice_generator.py
-└── outputs/
+backend/app/          FastAPI API, settings, LLM, speech, search, memory services
+frontend/src/         React desktop interface used by Electron
+config/               Example TOML configuration
+run_backend.py        Local backend launcher
+package.json          Vite/Electron frontend scripts
+requirements.txt      Python dependencies
 ```
+
+The LLM layer uses a provider interface (`LLMProvider`) with `OpenAIResponsesProvider` as the default so Anthropic, local, or enterprise providers can be added later without changing routes.
+
+## Features
+
+- Always-available push-to-talk microphone flow in the desktop UI.
+- Speech-to-text with OpenAI transcription.
+- Conversational responses through the OpenAI Responses API.
+- Natural text-to-speech playback with interruptible browser audio support.
+- Session memory and bounded context history.
+- Web search for recent information using DuckDuckGo Search.
+- Source links returned with web answers.
+- Webpage fetch and summarization endpoint.
+- Modern dark React UI with chat history, mic button, waveform, settings placeholder, and export.
+- Async FastAPI services, typed Pydantic models, logging, and environment configuration.
 
 ## Setup
 
-```bash
-python -m venv .venv
-source .venv/bin/activate
+```powershell
+py -3.12 -m venv .venv
+.\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
+copy .env.example .env
+# edit .env and set OPENAI_API_KEY
+python run_backend.py
 ```
 
-## Run
+In another terminal:
 
-```bash
-streamlit run app.py
+```powershell
+npm install
+npm run dev
+npm run electron
 ```
 
-## Optional API Enhancements
-Set environment variables for higher-quality AI text generation:
+## API
 
-- `OPENAI_API_KEY`
-- `OPENAI_MODEL` (default: `gpt-4o-mini`)
+- `GET /api/health` health check.
+- `POST /api/chat` JSON chat with optional `use_search`.
+- `POST /api/chat/stream` server-sent event compatible streaming endpoint.
+- `POST /api/speech/transcribe` upload audio and receive transcript.
+- `POST /api/speech/synthesize` receive MP3 speech for text.
+- `GET /api/web/summarize?url=...` summarize and extract webpage information.
 
-If keys are unavailable, the app falls back to an internal structured generator.
+## Environment
 
-## Notes
-- The app uses `edge-tts` for voice generation; internet access is required for synthesis.
-- Generated videos are saved in `outputs/`.
-- Logs are saved to `logs/app.log`.
+See `.env.example` and `config/config.example.toml` for runtime configuration. Keep real API keys out of source control.
+
+## Extending Providers
+
+Implement `LLMProvider.complete()` and `LLMProvider.stream()` in `backend/app/services/llm.py`, then inject the provider in `AssistantService`. Speech providers can be swapped behind `SpeechService` in the same style.
